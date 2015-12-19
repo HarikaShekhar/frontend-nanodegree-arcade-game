@@ -25,9 +25,22 @@ var Engine = (function(global) {
         ctx = canvas.getContext('2d'),
         lastTime;
 
-    canvas.width = 505;
-    canvas.height = 606;
+    canvas.width = 808;
+    canvas.height = 689;
+    doc.addEventListener('keydown', function(e) {
+        if ((e.keyCode == 13) && gameRestart ) {
+            canvas.width = canvas.width;
+            player.lives = 3;
+            player.score = 0;
+            player.seconds = 60;
+            gameRestart = false;
+            console.log("entered");
+            clock();
+        }
+    });
+
     doc.body.appendChild(canvas);
+
 
     /* This function serves as the kickoff point for the game loop itself
      * and handles properly calling the update and render methods.
@@ -48,6 +61,7 @@ var Engine = (function(global) {
         update(dt);
         render();
 
+
         /* Set our lastTime variable which is used to determine the time delta
          * for the next time this function is called.
          */
@@ -59,6 +73,8 @@ var Engine = (function(global) {
         win.requestAnimationFrame(main);
     }
 
+
+
     /* This function does some initial setup that should only occur once,
      * particularly setting the lastTime variable that is required for the
      * game loop.
@@ -67,6 +83,7 @@ var Engine = (function(global) {
         reset();
         lastTime = Date.now();
         main();
+        clock();
     }
 
     /* This function is called by main (our game loop) and itself calls all
@@ -80,9 +97,14 @@ var Engine = (function(global) {
      */
     function update(dt) {
         updateEntities(dt);
-        // checkCollisions();
+        checkCollisions();
     }
 
+    function checkCollisions() {
+        allEnemies.forEach(function(enemy) {
+            player.checkCollision(enemy);
+        })
+    }
     /* This is called by the update function and loops through all of the
      * objects within your allEnemies array as defined in app.js and calls
      * their update() methods. It will then call the update function for your
@@ -97,6 +119,52 @@ var Engine = (function(global) {
         player.update();
     }
 
+
+    function game()
+    {
+        if(gameRestart)
+            {
+                // TODO : Draw text on the canvas for Game Over and Game Restart
+                var gameover = document.getElementById('gameover');
+                gameover.volume = 0.2;
+                gameover.play();
+
+                ctx.font = "30pt Impact";
+                ctx.textAlign = "center";
+                ctx.lineWidth = "3";
+                ctx.fillStyle = "green";
+                ctx.fillRect(0, 0, 808, 689);
+                ctx.fillStyle="black";
+                ctx.fillText("Game Over!!!", canvas.width / 2, 100);
+                ctx.fillText("Try Again!!!", canvas.width / 2, 200);
+                ctx.fillText("Last Score: " + player.score, canvas.width / 2, 300);
+                ctx.fillText("Press ENTER key to Restart Game", canvas.width / 2, 400);
+                player.reset();
+                allEnemies.forEach(function(enemy) {
+                    enemy.reset();
+                });
+            }
+    }
+
+    function clock() {
+        if (player.lives > 0) {
+            player.seconds--;
+            if(player.seconds > 0 ) {
+                setTimeout(clock, 1000);
+            }
+            else {
+                player.lives--;
+                player.seconds = 60;
+                player.reset();
+                if (player.lives == 0) {
+                    gameRestart = true;
+                }
+                setTimeout(clock, 1000);
+            }
+        }
+    }
+    // clock();
+
     /* This function initially draws the "game level", it will then call
      * the renderEntities function. Remember, this function is called every
      * game tick (or loop of the game engine) because that's how games work -
@@ -109,14 +177,15 @@ var Engine = (function(global) {
          */
         var rowImages = [
                 'images/water-block.png',   // Top row is water
+                'images/water-block.png',   // Top row is water
                 'images/stone-block.png',   // Row 1 of 3 of stone
                 'images/stone-block.png',   // Row 2 of 3 of stone
                 'images/stone-block.png',   // Row 3 of 3 of stone
                 'images/grass-block.png',   // Row 1 of 2 of grass
                 'images/grass-block.png'    // Row 2 of 2 of grass
             ],
-            numRows = 6,
-            numCols = 5,
+            numRows = 7,
+            numCols = 8,
             row, col;
 
         /* Loop through the number of rows and columns we've defined above
@@ -134,6 +203,26 @@ var Engine = (function(global) {
                  */
                 ctx.drawImage(Resources.get(rowImages[row]), col * 101, row * 83);
             }
+        }
+        // var points = 1500;
+        ctx.font = "20pt Impact";
+        ctx.fillStyle = "white";
+        ctx.fillText(player.score, 730, 80);
+        ctx.strokeText(player.score ,730, 80);
+        game();
+        if (gameRestart == false) {
+        ctx.fillText("0:" + (player.seconds < 10 ? "0" : "") + String(player.seconds), 650, 80);
+        ctx.strokeText("0:" + (player.seconds < 10 ? "0" : "") + String(player.seconds) , 650, 80);
+        }
+
+        // var hearts = 3;
+        for (var i = 1; i <= player.lives; i++) {
+        // ctx.drawImage(Resources.get("images/Heart.png"), 5, 50, 30, 30);
+        //  for (i = 2; i<=player.lives;i++) {
+          ctx.drawImage(Resources.get("images/Heart.png"), 5 + (30 * (i - 1)), 50, 30, 30);
+         // }
+        // ctx.drawImage(Resources.get("images/Heart.png"), 5+30, 50, 30, 30);
+        // ctx.drawImage(Resources.get("images/Heart.png"), 5+30+30, 50, 30, 30);
         }
 
         renderEntities();
@@ -154,13 +243,15 @@ var Engine = (function(global) {
         player.render();
     }
 
+
     /* This function does nothing but it could have been a good place to
      * handle game reset states - maybe a new game menu or a game over screen
      * those sorts of things. It's only called once by the init() method.
      */
     function reset() {
-        // noop
+
     }
+
 
     /* Go ahead and load all of the images we know we're going to need to
      * draw our game level. Then set init as the callback method, so that when
@@ -171,7 +262,9 @@ var Engine = (function(global) {
         'images/water-block.png',
         'images/grass-block.png',
         'images/enemy-bug.png',
-        'images/char-boy.png'
+        // 'images/char-boy.png'
+        'images/char-princess-girl.png',
+        'images/Heart.png'
     ]);
     Resources.onReady(init);
 
