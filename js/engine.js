@@ -27,13 +27,23 @@ var Engine = (function(global) {
 
     canvas.width = 808;
     canvas.height = 689;
+
+    // reset the game variables for game restart
+    //resets player lives, score, timer, level and enemy speed
     doc.addEventListener('keydown', function(e) {
         if ((e.keyCode == 13) && gameRestart ) {
             canvas.width = canvas.width;
             player.lives = 3;
             player.score = 0;
             player.seconds = 60;
+            player.level = 1;
+            allEnemies.forEach(function(enemy) {
+                if (enemy != rockOne && enemy != rockTwo) {
+                    enemy.speed -= 50;
+                }
+            })
             gameRestart = false;
+            gameWin = false;
             console.log("entered");
             clock();
         }
@@ -73,8 +83,6 @@ var Engine = (function(global) {
         win.requestAnimationFrame(main);
     }
 
-
-
     /* This function does some initial setup that should only occur once,
      * particularly setting the lastTime variable that is required for the
      * game loop.
@@ -85,6 +93,7 @@ var Engine = (function(global) {
         main();
         clock();
     }
+
 
     /* This function is called by main (our game loop) and itself calls all
      * of the functions which may need to update entity's data. Based on how
@@ -100,52 +109,83 @@ var Engine = (function(global) {
         checkCollisions();
     }
 
+    /* This is called by the update function and loops through all of the
+     * objects within allEnemies array and player object as defined in app.js
+     * and call the player checkcollision() method.
+     */
     function checkCollisions() {
         allEnemies.forEach(function(enemy) {
             player.checkCollision(enemy);
         })
     }
+
     /* This is called by the update function and loops through all of the
-     * objects within your allEnemies array as defined in app.js and calls
-     * their update() methods. It will then call the update function for your
+     * objects within your allEnemies array except rock objects as defined in app.js
+     * and calls their update() methods. It will then call the update function for your
      * player object. These update methods should focus purely on updating
      * the data/properties related to the object. Do your drawing in your
      * render methods.
      */
     function updateEntities(dt) {
         allEnemies.forEach(function(enemy) {
-            enemy.update(dt);
+            if (enemy != rockOne && enemy != rockTwo) {
+                enemy.update(dt);
+            }
         });
         player.update();
     }
 
-
+    /* This is called by the render() function. This function checks for the gameRestart
+     * status and displays appropriate message on the canvas. Also resets player and
+     * enemy after reset.
+     */
     function game()
     {
-        if(gameRestart)
-            {
-                // TODO : Draw text on the canvas for Game Over and Game Restart
-                var gameover = document.getElementById('gameover');
-                gameover.volume = 0.2;
-                gameover.play();
+        if(gameRestart) {
+            // TODO : Draw text on the canvas for Game Over and Game Restart
+            var gameover = document.getElementById('gameover');
+            gameover.volume = 0.2;
+            gameover.play();
 
-                ctx.font = "30pt Impact";
-                ctx.textAlign = "center";
-                ctx.lineWidth = "3";
-                ctx.fillStyle = "green";
-                ctx.fillRect(0, 0, 808, 689);
-                ctx.fillStyle="black";
+            ctx.font = "30pt Impact";
+            ctx.textAlign = "center";
+            ctx.lineWidth = "3";
+            ctx.fillStyle = "green";
+            ctx.fillRect(0, 0, 808, 689);
+            ctx.fillStyle="white";
+            ctx.strokeStyle = "black";
+            ctx.lineWidth = "2";
+
+            if (gameWin) {
+                ctx.fillText("You Win!!!", canvas.width / 2, 100);
+                ctx.fillText("Play Again!!!", canvas.width / 2, 200);
+                ctx.strokeText("You Win!!!", canvas.width / 2, 100);
+                ctx.strokeText("Play Again!!!", canvas.width / 2, 200);
+
+            }
+            else {
                 ctx.fillText("Game Over!!!", canvas.width / 2, 100);
                 ctx.fillText("Try Again!!!", canvas.width / 2, 200);
-                ctx.fillText("Last Score: " + player.score, canvas.width / 2, 300);
-                ctx.fillText("Press ENTER key to Restart Game", canvas.width / 2, 400);
-                player.reset();
-                allEnemies.forEach(function(enemy) {
-                    enemy.reset();
-                });
+                ctx.strokeText("Game Over!!!", canvas.width / 2, 100);
+                ctx.strokeText("Try Again!!!", canvas.width / 2, 200);
             }
+            ctx.fillText("Last Score: " + player.score, canvas.width / 2, 300);
+            ctx.fillText("Press ENTER key to Restart Game", canvas.width / 2, 400);
+            ctx.strokeText("Last Score: " + player.score, canvas.width / 2, 300);
+            ctx.strokeText("Press ENTER key to Restart Game", canvas.width / 2, 400);
+
+            player.reset();
+            allEnemies.forEach(function(enemy) {
+                if (enemy != rockOne && enemy != rockTwo) {
+                    enemy.reset();
+                }
+            });
+        }
     }
 
+    /* This is called by the init() function. This function implements a One - minute
+     * timer. Reduces player life after every minute, resets player position and game.
+     */
     function clock() {
         if (player.lives > 0) {
             player.seconds--;
@@ -163,7 +203,7 @@ var Engine = (function(global) {
             }
         }
     }
-    // clock();
+
 
     /* This function initially draws the "game level", it will then call
      * the renderEntities function. Remember, this function is called every
@@ -204,25 +244,29 @@ var Engine = (function(global) {
                 ctx.drawImage(Resources.get(rowImages[row]), col * 101, row * 83);
             }
         }
-        // var points = 1500;
+        // draw player Score and Game level
         ctx.font = "20pt Impact";
         ctx.fillStyle = "white";
-        ctx.fillText(player.score, 730, 80);
-        ctx.strokeText(player.score ,730, 80);
-        game();
-        if (gameRestart == false) {
-        ctx.fillText("0:" + (player.seconds < 10 ? "0" : "") + String(player.seconds), 650, 80);
-        ctx.strokeText("0:" + (player.seconds < 10 ? "0" : "") + String(player.seconds) , 650, 80);
+        ctx.fillText("Level : " + player.level, 310, 80);
+        ctx.strokeText("Level : " + player.level, 310, 80);
+        ctx.fillText("Score : ", 620, 80);
+        ctx.strokeText("Score : " , 620, 80);
+        ctx.fillText(player.score, 720, 80);
+        ctx.strokeText(player.score ,720, 80);
+
+        //draw player lives on the canvas
+        for (var i = 1; i <= player.lives; i++) {
+            ctx.drawImage(Resources.get("images/Heart.png"), 5 + (30 * (i - 1)), 50, 30, 30);
         }
 
-        // var hearts = 3;
-        for (var i = 1; i <= player.lives; i++) {
-        // ctx.drawImage(Resources.get("images/Heart.png"), 5, 50, 30, 30);
-        //  for (i = 2; i<=player.lives;i++) {
-          ctx.drawImage(Resources.get("images/Heart.png"), 5 + (30 * (i - 1)), 50, 30, 30);
-         // }
-        // ctx.drawImage(Resources.get("images/Heart.png"), 5+30, 50, 30, 30);
-        // ctx.drawImage(Resources.get("images/Heart.png"), 5+30+30, 50, 30, 30);
+        game();
+
+        // display Timer seconds
+        if (gameRestart == false) {
+        ctx.fillText("Time : ", 430, 80);
+        ctx.strokeText("Time : " , 430, 80);
+        ctx.fillText("0 : " + (player.seconds < 10 ? "0" : "") + String(player.seconds), 520, 80);
+        ctx.strokeText("0 : " + (player.seconds < 10 ? "0" : "") + String(player.seconds) , 520, 80);
         }
 
         renderEntities();
@@ -237,10 +281,14 @@ var Engine = (function(global) {
          * the render function you have defined.
          */
         allEnemies.forEach(function(enemy) {
-            enemy.render();
+            // enemy.render();
+            if (gameRestart == false) {
+                enemy.render();
+            }
         });
 
         player.render();
+
     }
 
 
@@ -264,7 +312,8 @@ var Engine = (function(global) {
         'images/enemy-bug.png',
         // 'images/char-boy.png'
         'images/char-princess-girl.png',
-        'images/Heart.png'
+        'images/Heart.png',
+        'images/Rock.png'
     ]);
     Resources.onReady(init);
 
